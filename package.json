@@ -1,0 +1,9 @@
+{
+  "name": "devtools-weekly-digest-cron",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "schedule": "node src/digest_scheduler.ts"
+  }
+}
