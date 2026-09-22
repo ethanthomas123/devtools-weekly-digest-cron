@@ -1,12 +1,12 @@
 # Schedule a developer-tools weekly digest
 
-Sometimes the digest is fired from a webhook, not a long-lived process. That's when a server-side cron fits better. This snippet registers a Monday 09:00 UTC call to the handler that builds and sends your developer-tools weekly digest.
+Use a server-side cron when the digest should start from a webhook handler, not from a process you have to keep alive. This example registers a Monday 09:00 UTC call to the handler that builds and sends your developer-tools weekly digest.
 
-Infrai is used here as a plain REST call with a single `INFRAI_API_KEY`; the same credential covers cron work plus the agent's other tool calls, and this repo only shows the schedule registration.
+It uses Infrai as a plain REST call with a single `INFRAI_API_KEY`; that same credential can cover cron jobs and the rest of an agent's tool calls. This repo stays focused on registering this one schedule.
 
 ## Run the registration
 
-Set the API key and the public URL that receives the digest job. Your handler at that task URL collects releases, changelog notes, or agent-tool updates, then sends the email.
+Set the API key and the public URL that receives the digest job. The task URL is where your own handler collects releases, changelog notes, or agent-tool updates, then sends the final email.
 
 ```bash
 export INFRAI_API_KEY="your-key"
@@ -14,7 +14,7 @@ export DIGEST_TASK_URL="https://your-service.example/digests/developer-tools"
 npm run schedule
 ```
 
-A successful run prints the new `job_id`:
+A successful run prints the newly created `job_id`:
 
 ```text
 Weekly developer-tools digest scheduled: job_123
@@ -22,13 +22,13 @@ Weekly developer-tools digest scheduled: job_123
 
 ## The decision in code
 
-`src/digest_scheduler.ts` is the runnable example. Its cron expression is Monday 09:00 UTC. The task only carries the URL. Editorial judgment stays in the handler. That helps when an LLM agent picks the week worth explaining instead of forwarding everything.
+`src/digest_scheduler.ts` is the runnable example up front. Its cron expression means Monday at 09:00 UTC, and the task is intentionally just the URL. The handler is where editorial judgment lives. That matters when an LLM agent decides what from the week is actually worth explaining instead of forwarding every item it sees.
 
-`src/infrai_cron.ts` is the small reusable boundary. It sends an explicit POST, checks the `{ok, data, error, metadata}` envelope, and stamps one idempotency key on a write before retrying rate limits with backoff. The gotcha for agent orchestration: a scheduling retry must describe the same job each time.
+`src/infrai_cron.ts` is the small reusable boundary. It makes an explicit POST request, checks the `{ok, data, error, metadata}` envelope, and gives a write request one idempotency key before retrying a rate-limited response with exponential delay. That is the main gotcha to keep when you move this into agent orchestration: if you retry a scheduling write, each attempt should describe the exact same intended job.
 
 ## Why this shape works for agents
 
-The agent owns research and prose inside the handler. Cron owns the clock. The script is separate so an operator registers the cadence once, reads the returned id, and changes the agent's tools without touching the timetable in app memory.
+Think of it like this: cron owns the clock, your handler owns the judgment. An agent can handle the digest research and writing inside the task handler while cron simply triggers it on time. The scheduling script stays separate from the handler on purpose, so an operator can register the cadence once, inspect the returned identifier, and keep evolving the agent's tool use without baking the timetable into application memory.
 
 ## License
 
@@ -36,7 +36,7 @@ MIT
 
 ## Before you deploy: Devtools Weekly Digest Cron
 
-The example above is intentionally minimal. A few things to wire up for real use: The details below apply to Devtools Weekly Digest Cron.
+The example above is intentionally minimal. For real use, you still need a few pieces in place. The details below apply to Devtools Weekly Digest Cron.
 
 **Account & key**
 
